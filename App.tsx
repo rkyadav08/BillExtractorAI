@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { extractBillData } from './services/geminiService';
 import { ApiResponse, ProcessingStatus } from './types';
@@ -17,10 +16,6 @@ const App: React.FC = () => {
   });
   
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Hardcoded for demo purposes as per system prompt guidelines
-  // In a real scenario, this would be process.env.API_KEY
-  const API_KEY = process.env.API_KEY || ""; 
 
   const handleUrlSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,16 +37,17 @@ const App: React.FC = () => {
   };
 
   const processDocument = async (urlOrBase64: string) => {
-    setStatus({ loading: true, step: 'fetching_image', message: 'Analyzing document structure...' });
+    // Status Logic
+    setStatus({ loading: true, step: 'fetching_image', message: 'Sending document to server...' });
     setResult(null);
     setActiveTab('preview');
 
     try {
-      if(status.step === 'idle') {
-         setStatus({ loading: true, step: 'analyzing', message: 'Extracting line items with Gemini 2.5...' });
-      }
+      // Small artificial delay to show state change if it's too fast
+      await new Promise(r => setTimeout(r, 500));
+      setStatus({ loading: true, step: 'analyzing', message: 'Extracting line items with Gemini 2.5...' });
 
-      const response = await extractBillData(urlOrBase64, API_KEY);
+      const response = await extractBillData(urlOrBase64);
       
       setResult(response);
       
@@ -214,13 +210,6 @@ const App: React.FC = () => {
                     </button>
                   </div>
                 </div>
-              </div>
-              
-              {/* CORS Warning for URL method */}
-              <div className="mt-4 text-center">
-                <p className="text-xs text-gray-400">
-                  Note: If pasting a URL fails, it is likely due to browser CORS security. Please download the image and use the "Upload File" button instead.
-                </p>
               </div>
             </div>
 
