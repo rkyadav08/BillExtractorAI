@@ -37,14 +37,10 @@ const App: React.FC = () => {
 
   const processDocument = async (urlOrBase64: string) => {
     // Status Logic
-    setStatus({ loading: true, step: 'fetching_image', message: 'Sending document to server...' });
+    setStatus({ loading: true, step: 'analyzing', message: 'Extracting line items...' });
     setResult(null);
 
     try {
-      // Small artificial delay to show state change if it's too fast
-      await new Promise(r => setTimeout(r, 500));
-      setStatus({ loading: true, step: 'analyzing', message: 'Extracting line items with Gemini 2.5...' });
-
       const response = await extractBillData(urlOrBase64);
       
       setResult(response);
@@ -137,7 +133,7 @@ const App: React.FC = () => {
               <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
             </div>
             <h3 className="text-xl font-semibold text-gray-900">{status.message}</h3>
-            <p className="text-gray-500 mt-2">This usually takes about 5-10 seconds.</p>
+            <p className="text-gray-500 mt-2">Processing document...</p>
           </div>
         )}
 
