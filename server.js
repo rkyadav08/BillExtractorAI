@@ -1,16 +1,15 @@
-
-require('dotenv').config();
-const express = require('express');
-const bodyParser = require('body-parser');
-const cors = require('cors');
-const { GoogleGenAI, Type } = require("@google/genai");
+import 'dotenv/config';
+import express from 'express';
+import cors from 'cors';
+import { GoogleGenAI, Type } from "@google/genai";
+import { Buffer } from 'node:buffer';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
-app.use(bodyParser.json());
+app.use(express.json()); // Built-in body parser
 
 // Initialize Gemini
 const apiKey = process.env.API_KEY;
