@@ -7,7 +7,7 @@
 ![Tech](https://img.shields.io/badge/AI-Gemini%202.5%20Flash-blue)
 ![Stack](https://img.shields.io/badge/Stack-React%20%2B%20Node.js-orange)
 
-**🚀 Live Demo / API Base URL:** `(https://billextractorai.onrender.com/)`
+**🚀 Live Demo / API Base URL:** `https://billextractorai.onrender.com/`
 
 ## 📖 Project Overview
 
