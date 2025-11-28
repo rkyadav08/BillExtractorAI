@@ -1,194 +1,102 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
+import { Bot, Sparkles, ChevronRight } from 'lucide-react';
+import FileUpload from './components/FileUpload';
+import ResultsDisplay from './components/ResultsDisplay';
+import { BillExtractionResponse } from './types';
 import { extractBillData } from './services/geminiService';
-import { ApiResponse, ProcessingStatus } from './types';
-import JsonViewer from './components/JsonViewer';
-import BillTable from './components/BillTable';
-import { ScanLine, Upload, AlertCircle, CheckCircle2, Loader2, List, Hash, Zap } from 'lucide-react';
 
 const App: React.FC = () => {
-  const [docUrl, setDocUrl] = useState<string>('');
-  const [result, setResult] = useState<ApiResponse | null>(null);
-  const [status, setStatus] = useState<ProcessingStatus>({
-    loading: false,
-    step: 'idle',
-    message: ''
-  });
-  
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<BillExtractionResponse | null>(null);
 
-  const handleUrlSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!docUrl) return;
-    await processDocument(docUrl);
-  };
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        const base64 = event.target?.result as string;
-        setDocUrl("(Uploaded File)"); // Just for display
-        await processDocument(base64);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const processDocument = async (urlOrBase64: string) => {
-    // Immediate feedback
-    setStatus({ loading: true, step: 'analyzing', message: 'Processing Multi-Page Document...' });
+  const handleProcess = async (input: File | string) => {
+    setIsProcessing(true);
+    setError(null);
     setResult(null);
 
     try {
-      const response = await extractBillData(urlOrBase64);
-      
-      setResult(response);
-      
-      if (response.is_success) {
-        setStatus({ loading: false, step: 'complete', message: 'Extraction Successful' });
-      } else {
-        setStatus({ loading: false, step: 'error', message: response.error || 'Extraction Failed' });
-      }
-    } catch (error) {
-      setResult({
-        is_success: false,
-        token_usage: { total_tokens: 0, input_tokens: 0, output_tokens: 0 },
-        data: null,
-        error: "Application error occurred"
-      });
-      setStatus({ loading: false, step: 'error', message: 'An unexpected error occurred' });
+      const data = await extractBillData(input);
+      setResult(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An unknown error occurred");
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#f8fafc]">
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900">
+      
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="bg-indigo-600 p-2 rounded-lg">
-              <ScanLine className="w-6 h-6 text-white" />
+          <div className="flex items-center gap-2">
+            <div className="bg-blue-600 p-2 rounded-lg text-white">
+              <Bot size={24} />
             </div>
-            <h1 className="text-xl font-bold text-gray-900 tracking-tight">BillExtractor <span className="text-indigo-600">AI</span></h1>
+            <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-indigo-600">
+              BillExtract AI
+            </h1>
           </div>
-          <div className="flex items-center gap-2 px-3 py-1 bg-green-50 text-green-700 rounded-full text-xs font-medium border border-green-200">
-             <Zap className="w-3 h-3 fill-current" />
-             <span>Fast Mode Active</span>
+          <div className="hidden md:flex items-center gap-4 text-sm font-medium text-slate-600">
+             <span>Powered by Gemini 2.5 Flash</span>
+             <span className="w-px h-4 bg-slate-300"></span>
+             <span className="flex items-center gap-1 text-blue-600"><Sparkles size={14}/> Accurate</span>
+             <span className="flex items-center gap-1 text-blue-600"><Sparkles size={14}/> Fast</span>
           </div>
         </div>
       </header>
 
-      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
-        {/* Input Section */}
-        <div className="max-w-3xl mx-auto mb-8">
-          <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-gray-900 mb-3">Medical Bill Extraction</h2>
-            <p className="text-gray-600">Paste a URL or upload a PDF/Image. Supports multi-page documents.</p>
+      {/* Main Content */}
+      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 w-full">
+        
+        {/* Intro Section (Only show if no results yet) */}
+        {!result && !isProcessing && (
+          <div className="text-center mb-12 animate-fade-in-up">
+            <h2 className="text-4xl font-extrabold text-slate-900 mb-4 tracking-tight">
+              Automate your Invoice Data Extraction
+            </h2>
+            <p className="text-lg text-slate-600 max-w-2xl mx-auto mb-8">
+              Upload complex medical bills, pharmacy receipts, or detailed invoices. 
+              Our AI extracts line items, rates, and totals with structured JSON output.
+            </p>
           </div>
+        )}
 
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-2">
-            <div className="flex flex-col md:flex-row gap-2">
-              <form onSubmit={handleUrlSubmit} className="flex-1 flex gap-2">
-                <input
-                  type="text"
-                  placeholder="https://example.com/invoice.pdf"
-                  className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                  value={docUrl === "(Uploaded File)" ? "" : docUrl}
-                  onChange={(e) => setDocUrl(e.target.value)}
-                  disabled={status.loading}
-                />
-                <button 
-                  type="submit"
-                  disabled={status.loading || !docUrl}
-                  className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-3 rounded-xl font-medium transition-colors flex items-center gap-2 whitespace-nowrap"
-                >
-                  {status.loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Run Extraction'}
-                </button>
-              </form>
-              
-              <div className="flex items-center justify-center px-2 text-gray-400 font-medium text-sm uppercase">or</div>
-
-              <div className="relative">
-                <input 
-                  type="file" 
-                  ref={fileInputRef} 
-                  onChange={handleFileUpload} 
-                  accept="image/*,.pdf" 
-                  className="hidden"
-                />
-                <button 
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={status.loading}
-                  className="w-full md:w-auto border-2 border-dashed border-gray-300 hover:border-indigo-500 hover:bg-indigo-50 text-gray-600 px-6 py-3 rounded-xl font-medium transition-all flex items-center justify-center gap-2 whitespace-nowrap"
-                >
-                  <Upload className="w-4 h-4" />
-                  <span>Upload PDF/Img</span>
-                </button>
-              </div>
-            </div>
-          </div>
+        {/* Upload Section */}
+        <div className={result ? "mb-8 border-b border-slate-200 pb-8" : ""}>
+          <FileUpload onProcess={handleProcess} isProcessing={isProcessing} />
         </div>
 
+        {/* Error State */}
+        {error && (
+          <div className="max-w-2xl mx-auto mb-8 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 flex items-start gap-3">
+             <div className="mt-0.5 font-bold">Error:</div>
+             <div>{error}</div>
+          </div>
+        )}
+
         {/* Results Section */}
-        {status.loading && (
-          <div className="max-w-3xl mx-auto text-center py-12">
-            <div className="inline-flex items-center justify-center p-4 bg-white rounded-full shadow-lg mb-4">
-              <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+        {result && (
+          <div className="space-y-6">
+            <div className="flex items-center gap-2 text-sm text-slate-500 mb-4">
+              <span className="hover:text-slate-900 cursor-pointer" onClick={() => setResult(null)}>Home</span>
+              <ChevronRight size={14} />
+              <span className="font-medium text-slate-900">Extraction Results</span>
             </div>
-            <h3 className="text-xl font-semibold text-gray-900">{status.message}</h3>
-            <p className="text-gray-500 mt-2">Analyzing pages and extracting line items...</p>
+            <ResultsDisplay result={result} />
           </div>
         )}
 
-        {result && !status.loading && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-fade-in">
-            {/* Left Column: Visual Data */}
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                  <List className="w-5 h-5 text-gray-500" />
-                  Extraction Results
-                </h3>
-                {result.is_success ? (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> Success
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
-                    <AlertCircle className="w-3.5 h-3.5" /> Failed
-                  </span>
-                )}
-              </div>
-
-              {result.is_success && result.data ? (
-                <BillTable data={result.data} />
-              ) : (
-                <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-red-800">
-                  <p className="font-medium">Extraction Failed</p>
-                  <p className="text-sm mt-1">{result.error}</p>
-                </div>
-              )}
-            </div>
-
-            {/* Right Column: JSON Output */}
-            <div className="flex flex-col h-[600px] lg:h-auto lg:min-h-[600px]">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                  <Hash className="w-5 h-5 text-gray-500" />
-                  JSON Response
-                </h3>
-                <div className="flex gap-4 text-xs font-mono text-gray-500">
-                  <div title="Input Tokens">IN: {result.token_usage.input_tokens}</div>
-                  <div title="Output Tokens">OUT: {result.token_usage.output_tokens}</div>
-                  <div title="Total Tokens" className="font-bold text-indigo-600">TOTAL: {result.token_usage.total_tokens}</div>
-                </div>
-              </div>
-              <JsonViewer data={result} />
-            </div>
-          </div>
-        )}
       </main>
+
+      {/* Footer */}
+      <footer className="bg-white border-t border-slate-200 py-8 mt-auto">
+        <div className="max-w-7xl mx-auto px-4 text-center text-slate-500 text-sm">
+          <p>&copy; {new Date().getFullYear()} BillExtract AI. Built for the HackRx Datathon.</p>
+        </div>
+      </footer>
     </div>
   );
 };
