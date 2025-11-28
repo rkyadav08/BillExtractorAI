@@ -85,6 +85,15 @@ async function processDocumentInput(input) {
   }
 }
 
+// Root Route to fix "Cannot GET /" error
+app.get('/', (req, res) => {
+  res.status(200).json({
+    status: "online",
+    message: "Medical Bill Extractor API is running.",
+    usage: "Send POST requests to /extract-bill-data with { 'document': 'URL' }"
+  });
+});
+
 app.post('/extract-bill-data', async (req, res) => {
   try {
     const { document: documentInput } = req.body;
