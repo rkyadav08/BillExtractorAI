@@ -115,17 +115,24 @@ app.post('/extract-bill-data', async (req, res) => {
 
     const { base64, mimeType } = await processDocumentInput(documentInput);
 
+    // Optimized Prompt strictly following HackRx rules
     const prompt = `
-      You are an expert automated invoice data extraction system. 
-      Analyze the provided medical bill or invoice image.
-      Extract all line items visible in the document.
-      
-      RULES:
-      1. IGNORE headers, footers, and summary lines like "Total", "Subtotal", "Balance Due" unless it is a specific line item.
-      2. Do not double count entries.
-      3. Ensure 'item_amount' is the final amount, 'item_rate' is unit price.
-      4. If quantity is not stated, use 1.
-      5. Return raw numbers (no currency symbols).
+      You are an expert medical bill data extraction system.
+      Analyze the document image and extract line items into the specified JSON structure.
+
+      PAGE TYPE DEFINITIONS:
+      - "Final Bill": A consolidated bill showing category-level totals (e.g., "Room Charges", "Pharmacy Charges") without detailed lists of individual items inside those categories.
+      - "Bill Detail": Contains detailed line-item breakdowns (e.g., specific medicines, specific lab tests) often grouped by category.
+      - "Pharmacy": A receipt specifically from a pharmacy listing medicines and consumables.
+
+      CRITICAL EXTRACTION RULES:
+      1. **NO DOUBLE COUNTING**: Strictly IGNORE summary rows like "Total", "Subtotal", "Net Amount", "Balance Due", "Amount Received". Only extract the individual line items that contribute to the total.
+      2. **MISSING VALUES**: 
+          - If 'item_rate' is NOT explicitly present in the row, set it to 0.0.
+          - If 'item_quantity' is NOT explicitly present in the row, set it to 0.0.
+      3. **EXACT AMOUNTS**: Extract 'item_amount' exactly as printed. Do NOT round off (e.g., 125.50 should be 125.50, not 126).
+      4. **HIERARCHY**: In "Bill Detail" pages, extract the specific items (child rows) rather than the category headers if the category header is just a sum of the children.
+      5. **OUTPUT**: Return raw numbers.
     `;
 
     const response = await ai.models.generateContent({
@@ -139,7 +146,7 @@ app.post('/extract-bill-data', async (req, res) => {
       config: {
         responseMimeType: "application/json",
         responseSchema: billSchema,
-        temperature: 0,
+        temperature: 0, // Zero temperature for deterministic extraction
       },
     });
 
