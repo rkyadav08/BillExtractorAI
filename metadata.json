@@ -1,4 +1,4 @@
 {
-  "name": "BillExtractor AI",
-  "description": "Intelligent medical bill extraction tool using Gemini 2.5 Flash to parse complex invoices into structured JSON data."
+  "name": "BillExtract AI",
+  "description": "An intelligent bill extraction tool powered by Gemini 2.5 Flash. Upload invoices (PDF/Images) to extract structured line-item data, calculate totals, and categorize bill types instantly."
 }
