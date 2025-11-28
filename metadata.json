@@ -1,0 +1,4 @@
+{
+  "name": "BillExtractor AI",
+  "description": "Intelligent medical bill extraction tool using Gemini 2.5 Flash to parse complex invoices into structured JSON data."
+}
