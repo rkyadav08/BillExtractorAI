@@ -3,7 +3,7 @@ import { extractBillData } from './services/geminiService';
 import { ApiResponse, ProcessingStatus } from './types';
 import JsonViewer from './components/JsonViewer';
 import BillTable from './components/BillTable';
-import { ScanLine, Upload, AlertCircle, CheckCircle2, Loader2, List, Hash } from 'lucide-react';
+import { ScanLine, Upload, AlertCircle, CheckCircle2, Loader2, List, Hash, Zap } from 'lucide-react';
 
 const App: React.FC = () => {
   const [docUrl, setDocUrl] = useState<string>('');
@@ -36,8 +36,8 @@ const App: React.FC = () => {
   };
 
   const processDocument = async (urlOrBase64: string) => {
-    // Status Logic
-    setStatus({ loading: true, step: 'analyzing', message: 'Extracting line items...' });
+    // Immediate feedback
+    setStatus({ loading: true, step: 'analyzing', message: 'Processing Multi-Page Document...' });
     setResult(null);
 
     try {
@@ -72,15 +72,19 @@ const App: React.FC = () => {
             </div>
             <h1 className="text-xl font-bold text-gray-900 tracking-tight">BillExtractor <span className="text-indigo-600">AI</span></h1>
           </div>
+          <div className="flex items-center gap-2 px-3 py-1 bg-green-50 text-green-700 rounded-full text-xs font-medium border border-green-200">
+             <Zap className="w-3 h-3 fill-current" />
+             <span>Fast Mode Active</span>
+          </div>
         </div>
       </header>
 
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
         {/* Input Section */}
-        <div className="max-w-3xl mx-auto mb-12">
+        <div className="max-w-3xl mx-auto mb-8">
           <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-gray-900 mb-3">Extract Data from Medical Bills</h2>
-            <p className="text-gray-600">Upload an invoice or paste a URL to instantly parse line items, rates, and quantities into structured JSON.</p>
+            <h2 className="text-3xl font-bold text-gray-900 mb-3">Medical Bill Extraction</h2>
+            <p className="text-gray-600">Paste a URL or upload a PDF/Image. Supports multi-page documents.</p>
           </div>
 
           <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-2">
@@ -88,7 +92,7 @@ const App: React.FC = () => {
               <form onSubmit={handleUrlSubmit} className="flex-1 flex gap-2">
                 <input
                   type="text"
-                  placeholder="https://example.com/bill.png"
+                  placeholder="https://example.com/invoice.pdf"
                   className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                   value={docUrl === "(Uploaded File)" ? "" : docUrl}
                   onChange={(e) => setDocUrl(e.target.value)}
@@ -99,7 +103,7 @@ const App: React.FC = () => {
                   disabled={status.loading || !docUrl}
                   className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-3 rounded-xl font-medium transition-colors flex items-center gap-2 whitespace-nowrap"
                 >
-                  {status.loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Extract Data'}
+                  {status.loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Run Extraction'}
                 </button>
               </form>
               
@@ -119,7 +123,7 @@ const App: React.FC = () => {
                   className="w-full md:w-auto border-2 border-dashed border-gray-300 hover:border-indigo-500 hover:bg-indigo-50 text-gray-600 px-6 py-3 rounded-xl font-medium transition-all flex items-center justify-center gap-2 whitespace-nowrap"
                 >
                   <Upload className="w-4 h-4" />
-                  <span>Upload File</span>
+                  <span>Upload PDF/Img</span>
                 </button>
               </div>
             </div>
@@ -133,7 +137,7 @@ const App: React.FC = () => {
               <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
             </div>
             <h3 className="text-xl font-semibold text-gray-900">{status.message}</h3>
-            <p className="text-gray-500 mt-2">Processing document...</p>
+            <p className="text-gray-500 mt-2">Analyzing pages and extracting line items...</p>
           </div>
         )}
 
@@ -144,7 +148,7 @@ const App: React.FC = () => {
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
                   <List className="w-5 h-5 text-gray-500" />
-                  Parsed Line Items
+                  Extraction Results
                 </h3>
                 {result.is_success ? (
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
@@ -161,7 +165,7 @@ const App: React.FC = () => {
                 <BillTable data={result.data} />
               ) : (
                 <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-red-800">
-                  <p className="font-medium">Error processing document</p>
+                  <p className="font-medium">Extraction Failed</p>
                   <p className="text-sm mt-1">{result.error}</p>
                 </div>
               )}
@@ -172,7 +176,7 @@ const App: React.FC = () => {
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
                   <Hash className="w-5 h-5 text-gray-500" />
-                  API Response
+                  JSON Response
                 </h3>
                 <div className="flex gap-4 text-xs font-mono text-gray-500">
                   <div title="Input Tokens">IN: {result.token_usage.input_tokens}</div>
