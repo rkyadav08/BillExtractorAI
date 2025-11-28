@@ -1,83 +1,137 @@
-# BillExtractor AI - Hackathon Solution
+# 🧾 Medical Bill Extractor AI
 
-This repository contains the full solution for the Medical Bill Data Extraction challenge.
+> **HackRx Datathon Solution**  
+> An intelligent, high-precision document extraction system designed to parse complex medical invoices into structured JSON data using Google Gemini 2.5 Flash.
 
-## Project Structure
+![Project Banner](https://img.shields.io/badge/Status-Production%20Ready-success)
+![Tech](https://img.shields.io/badge/AI-Gemini%202.5%20Flash-blue)
+![Stack](https://img.shields.io/badge/Stack-React%20%2B%20Node.js-orange)
 
-- **Frontend (`/src`)**: A React application to visualize the extraction process, upload files, and view the structured JSON output.
-- **Backend (`server.js`)**: A Node.js Express server that exposes the required `POST /extract-bill-data` API endpoint.
+## 📖 Project Overview
 
-## 🚀 Deployment Guide (Backend API)
+This project addresses the challenge of extracting granular line-item details from multi-page medical bills. Unlike standard OCR tools that merely return text, **BillExtractor AI** understands the semantic structure of invoices.
 
-To satisfy the hackathon requirement of submitting an API endpoint, you must deploy the **Backend**.
+It is engineered to:
+1.  **Categorize Pages**: Distinguish between "Bill Details", "Final Bill" summaries, and "Pharmacy" lists.
+2.  **Ensure Mathematical Consistency**: Intelligently ignores "Subtotal", "Total", and "Balance Due" lines to prevent double-counting—a critical requirement for accurate financial reconciliation.
+3.  **Standardize Output**: Returns data in a strict, pre-defined JSON schema ready for downstream ERP or insurance processing.
 
-### Option A: Deploy to Render (Recommended & Free)
+## 🚀 Key Features
 
-1.  **Push to GitHub**:
-    - Create a new repository on GitHub.
-    - Push all files in this folder to the repository.
+*   **Multimodal Analysis**: Uses **Google Gemini 2.5 Flash** to process visual document layouts directly (no intermediate OCR text conversion), resulting in higher accuracy for table alignments.
+*   **Smart Filtering**: explicitly trained via system prompting to exclude summary rows to ensure the `total_item_count` and summation of line items match the actual bill total.
+*   **Dual Interface**:
+    *   **REST API**: A production-ready `POST /extract-bill-data` endpoint for integration.
+    *   **Visualizer UI**: A React-based frontend to upload bills, preview extraction results, and debug JSON output in real-time.
+*   **Deployment Ready**: Configured for immediate deployment on cloud platforms like Render or Railway.
 
-2.  **Create Service on Render**:
-    - Go to [dashboard.render.com](https://dashboard.render.com).
-    - Click **New +** -> **Web Service**.
-    - Connect your GitHub repository.
+## 🛠️ Tech Stack
 
-3.  **Configure Settings**:
-    - **Name**: `bill-extractor-api`
-    - **Runtime**: `Node`
-    - **Build Command**: `npm install`
-    - **Start Command**: `node server.js`
+*   **Core AI Model**: Google Gemini 2.5 Flash (`@google/genai` SDK)
+*   **Backend**: Node.js, Express (REST API)
+*   **Frontend**: React, TypeScript, Tailwind CSS, Lucide Icons
+*   **Build Tool**: Vite
 
-4.  **Set Environment Variables**:
-    - Scroll down to "Environment Variables".
-    - Key: `API_KEY`
-    - Value: `your_actual_google_gemini_api_key`
+---
 
-5.  **Deploy**:
-    - Click **Create Web Service**.
-    - Wait for the build to finish. Render will provide you with a URL (e.g., `https://bill-extractor-api.onrender.com`).
+## 🔌 API Documentation
 
-6.  **Verify**:
-    - Your API endpoint is now live at: `https://[your-url].onrender.com/extract-bill-data`
+The solution exposes a single, stateless endpoint designed for bulk processing.
 
-### Option B: Run Locally
+### `POST /extract-bill-data`
 
-1.  Install dependencies:
-    ```bash
-    npm install
-    ```
-2.  Set your API Key in a `.env` file:
-    ```
-    API_KEY=your_key_here
-    ```
-3.  Start the server:
-    ```bash
-    npm start
-    ```
-4.  Test with cURL:
-    ```bash
-    curl -X POST http://localhost:3000/extract-bill-data \
-    -H "Content-Type: application/json" \
-    -d '{"document": "https://hackrx.blob.core.windows.net/assets/datathon-IIT/sample_2.png"}'
-    ```
+**Headers**:
+`Content-Type: application/json`
 
-## 🖥️ Frontend Application
-
-The frontend is a visualization tool. To run it locally:
-
-1.  Run `npm run dev`.
-2.  Open the localhost link provided by Vite.
-
-## API Specification
-
-**Endpoint:** `POST /extract-bill-data`
-
-**Request Body:**
+**Request Body**:
 ```json
 {
-  "document": "https://public-url-to-image.png"
+  "document": "https://hackrx.blob.core.windows.net/assets/datathon-IIT/sample_2.png?..."
 }
 ```
 
-**Response:**
-Returns a JSON object containing `is_success`, `token_usage`, and the structured `data`.
+**Success Response (200 OK)**:
+```json
+{
+  "is_success": true,
+  "token_usage": {
+    "total_tokens": 850,
+    "input_tokens": 400,
+    "output_tokens": 450
+  },
+  "data": {
+    "pagewise_line_items": [
+      {
+        "page_no": "1",
+        "page_type": "Bill Detail",
+        "bill_items": [
+          {
+            "item_name": "Consultation Charge",
+            "item_amount": 500.00,
+            "item_rate": 500.00,
+            "item_quantity": 1.00
+          }
+        ]
+      }
+    ],
+    "total_item_count": 1
+  }
+}
+```
+
+---
+
+## 💻 Local Installation & Setup
+
+1.  **Clone the Repository**
+    ```bash
+    git clone https://github.com/your-username/bill-extractor-ai.git
+    cd bill-extractor-ai
+    ```
+
+2.  **Install Dependencies**
+    ```bash
+    npm install
+    ```
+
+3.  **Configure Environment**
+    Create a `.env` file in the root directory:
+    ```env
+    API_KEY=your_google_gemini_api_key_here
+    PORT=3000
+    ```
+
+4.  **Run the Application**
+    This command builds the frontend and starts the backend server:
+    ```bash
+    npm run build
+    npm start
+    ```
+
+5.  **Access the App**
+    *   **Frontend UI**: `http://localhost:3000`
+    *   **API Endpoint**: `http://localhost:3000/extract-bill-data`
+
+---
+
+## ☁️ Deployment Guide (Render)
+
+This project is configured for one-click deployment on Render.com.
+
+1.  Push your code to a GitHub repository.
+2.  Create a new **Web Service** on Render connected to your repo.
+3.  Use the following settings:
+    *   **Runtime**: Node
+    *   **Build Command**: `npm install && npm run build` (optional if serving UI) or just `npm install`
+    *   **Start Command**: `npm start`
+4.  Add your `API_KEY` in the **Environment Variables** tab.
+
+## 🧪 Evaluation & Accuracy Strategy
+
+To meet the hackathon's "Evaluation Criteria":
+1.  **Prompt Engineering**: The system prompt specifically instructs the model to ignore rows containing keywords like "Total" or "Subtotal" unless they are line items, preventing the common AI pitfall of double-counting.
+2.  **Schema Enforcement**: We use Gemini's `responseSchema` feature to strictly enforce integer/float types, ensuring no currency symbols (e.g., "$") pollute the data fields.
+
+## 📝 License
+
+This project is submitted for the HackRx Datathon.
