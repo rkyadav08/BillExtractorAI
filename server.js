@@ -3,13 +3,21 @@ import express from 'express';
 import cors from 'cors';
 import { GoogleGenAI, Type } from "@google/genai";
 import { Buffer } from 'node:buffer';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
-app.use(express.json()); // Built-in body parser
+app.use(express.json());
+
+// Serve Static Frontend Files (The result of 'npm run build')
+app.use(express.static(path.join(__dirname, 'dist')));
 
 // Initialize Gemini
 const apiKey = process.env.API_KEY;
@@ -18,7 +26,7 @@ if (!apiKey) {
 }
 const ai = new GoogleGenAI({ apiKey: apiKey });
 
-// Schema Definition (Must match the requirement exactly)
+// Schema Definition
 const billSchema = {
   type: Type.OBJECT,
   properties: {
@@ -73,7 +81,7 @@ async function fetchImageToBase64(url) {
   }
 }
 
-// POST /extract-bill-data
+// API Endpoint
 app.post('/extract-bill-data', async (req, res) => {
   try {
     const { document: documentUrl } = req.body;
@@ -89,10 +97,8 @@ app.post('/extract-bill-data', async (req, res) => {
 
     console.log(`Processing document: ${documentUrl}`);
 
-    // 1. Get Image Data
     const { base64, mimeType } = await fetchImageToBase64(documentUrl);
 
-    // 2. Prepare Prompt
     const prompt = `
       You are an expert automated invoice data extraction system. 
       Analyze the provided medical bill or invoice image.
@@ -106,7 +112,6 @@ app.post('/extract-bill-data', async (req, res) => {
       5. Return raw numbers (no currency symbols).
     `;
 
-    // 3. Call Gemini API
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: {
@@ -122,7 +127,6 @@ app.post('/extract-bill-data', async (req, res) => {
       },
     });
 
-    // 4. Parse Response
     if (!response.text) {
       throw new Error("No response from AI model.");
     }
@@ -130,7 +134,6 @@ app.post('/extract-bill-data', async (req, res) => {
     const data = JSON.parse(response.text);
     const usage = response.usageMetadata;
 
-    // 5. Send Success Response
     res.json({
       is_success: true,
       token_usage: {
@@ -150,6 +153,11 @@ app.post('/extract-bill-data', async (req, res) => {
       error: error.message || "Internal Server Error"
     });
   }
+});
+
+// Catch-all route to serve React App for non-API requests
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
 app.listen(PORT, () => {
