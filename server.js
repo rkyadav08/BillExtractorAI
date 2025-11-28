@@ -2,7 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { GoogleGenAI, Schema, Type } from "@google/genai";
+// FIX: Remove Schema and Type imports which cause named export errors in Node.js
+import { GoogleGenAI } from "@google/genai";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -25,41 +26,42 @@ app.use(express.static(path.join(__dirname, 'dist')));
 
 // --- API Configuration ---
 
+// FIX: Use string literals ("OBJECT", "STRING") instead of Type.OBJECT to avoid import errors
 const extractionSchema = {
-  type: Type.OBJECT,
+  type: "OBJECT",
   properties: {
-    is_success: { type: Type.BOOLEAN, description: "Set to true if extraction is successful" },
+    is_success: { type: "BOOLEAN", description: "Set to true if extraction is successful" },
     token_usage: {
-      type: Type.OBJECT,
+      type: "OBJECT",
       properties: {
-        total_tokens: { type: Type.INTEGER },
-        input_tokens: { type: Type.INTEGER },
-        output_tokens: { type: Type.INTEGER },
+        total_tokens: { type: "INTEGER" },
+        input_tokens: { type: "INTEGER" },
+        output_tokens: { type: "INTEGER" },
       },
       required: ["total_tokens", "input_tokens", "output_tokens"],
     },
     data: {
-      type: Type.OBJECT,
+      type: "OBJECT",
       properties: {
         pagewise_line_items: {
-          type: Type.ARRAY,
+          type: "ARRAY",
           items: {
-            type: Type.OBJECT,
+            type: "OBJECT",
             properties: {
-              page_no: { type: Type.STRING },
+              page_no: { type: "STRING" },
               page_type: { 
-                type: Type.STRING, 
+                type: "STRING", 
                 enum: ["Bill Detail", "Final Bill", "Pharmacy"] 
               },
               bill_items: {
-                type: Type.ARRAY,
+                type: "ARRAY",
                 items: {
-                  type: Type.OBJECT,
+                  type: "OBJECT",
                   properties: {
-                    item_name: { type: Type.STRING, description: "Exactly as mentioned in the bill" },
-                    item_amount: { type: Type.NUMBER, description: "Net Amount of the item post discounts" },
-                    item_rate: { type: Type.NUMBER, description: "Exactly as mentioned, 0.0 if not present" },
-                    item_quantity: { type: Type.NUMBER, description: "Exactly as mentioned, 0.0 if not present" },
+                    item_name: { type: "STRING", description: "Exactly as mentioned in the bill" },
+                    item_amount: { type: "NUMBER", description: "Net Amount of the item post discounts" },
+                    item_rate: { type: "NUMBER", description: "Exactly as mentioned, 0.0 if not present" },
+                    item_quantity: { type: "NUMBER", description: "Exactly as mentioned, 0.0 if not present" },
                   },
                   required: ["item_name", "item_amount", "item_rate", "item_quantity"]
                 }
@@ -68,7 +70,7 @@ const extractionSchema = {
             required: ["page_no", "page_type", "bill_items"]
           }
         },
-        total_item_count: { type: Type.INTEGER, description: "Count of items across all pages" }
+        total_item_count: { type: "INTEGER", description: "Count of items across all pages" }
       },
       propertyOrdering: ["pagewise_line_items", "total_item_count"],
       required: ["pagewise_line_items", "total_item_count"]
