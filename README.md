@@ -7,6 +7,8 @@
 ![Tech](https://img.shields.io/badge/AI-Gemini%202.5%20Flash-blue)
 ![Stack](https://img.shields.io/badge/Stack-React%20%2B%20Node.js-orange)
 
+**🚀 Live Demo / API Base URL:** `(https://billextractorai.onrender.com/)`
+
 ## 📖 Project Overview
 
 This project addresses the challenge of extracting granular line-item details from multi-page medical bills. Unlike standard OCR tools that merely return text, **BillExtractor AI** understands the semantic structure of invoices.
@@ -39,6 +41,8 @@ It is engineered to:
 The solution exposes a single, stateless endpoint designed for bulk processing.
 
 ### `POST /extract-bill-data`
+
+**Endpoint URL**: `https://[YOUR-RENDER-APP-NAME].onrender.com/extract-bill-data`
 
 **Headers**:
 `Content-Type: application/json`
@@ -125,6 +129,7 @@ This project is configured for one-click deployment on Render.com.
     *   **Build Command**: `npm install && npm run build` (optional if serving UI) or just `npm install`
     *   **Start Command**: `npm start`
 4.  Add your `API_KEY` in the **Environment Variables** tab.
+5.  **Important**: Once deployed, copy your Render URL (e.g., `https://bill-extractor-xyz.onrender.com`) and update your submission details.
 
 ## 🧪 Evaluation & Accuracy Strategy
 
