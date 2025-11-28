@@ -14,7 +14,8 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+// Increase payload limit to handle large Base64 images
+app.use(express.json({ limit: '50mb' }));
 
 // Serve Static Frontend Files (The result of 'npm run build')
 app.use(express.static(path.join(__dirname, 'dist')));
@@ -63,10 +64,27 @@ const billSchema = {
   required: ["pagewise_line_items", "total_item_count"],
 };
 
-// Helper: Fetch image from URL and convert to Base64
-async function fetchImageToBase64(url) {
+// Helper: Process input (URL or Base64) to get clean Base64 for Gemini
+async function processDocumentInput(input) {
+  // Case 1: Input is already a Data URI (Base64) - likely from File Upload
+  if (input.startsWith('data:')) {
+    const matches = input.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    if (matches && matches.length === 3) {
+      return {
+        mimeType: matches[1],
+        base64: matches[2]
+      };
+    }
+    // Fallback if regex fails but starts with data:
+    return {
+        mimeType: 'image/png',
+        base64: input.split(',')[1]
+    };
+  }
+
+  // Case 2: Input is a URL - Fetch it server-side to bypass CORS
   try {
-    const response = await fetch(url);
+    const response = await fetch(input);
     if (!response.ok) throw new Error(`Failed to fetch image: ${response.statusText}`);
     const arrayBuffer = await response.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
@@ -77,27 +95,25 @@ async function fetchImageToBase64(url) {
     };
   } catch (error) {
     console.error("Image fetch error:", error);
-    throw new Error("Could not access the provided document URL.");
+    throw new Error("Could not access the provided document URL. Please ensure the link is publicly accessible.");
   }
 }
 
 // API Endpoint
 app.post('/extract-bill-data', async (req, res) => {
   try {
-    const { document: documentUrl } = req.body;
+    const { document: documentInput } = req.body;
 
-    if (!documentUrl) {
+    if (!documentInput) {
       return res.status(400).json({
         is_success: false,
-        error: "Missing 'document' URL in request body.",
+        error: "Missing 'document' URL or data in request body.",
         token_usage: { total_tokens: 0, input_tokens: 0, output_tokens: 0 },
         data: null
       });
     }
 
-    console.log(`Processing document: ${documentUrl}`);
-
-    const { base64, mimeType } = await fetchImageToBase64(documentUrl);
+    const { base64, mimeType } = await processDocumentInput(documentInput);
 
     const prompt = `
       You are an expert automated invoice data extraction system. 
@@ -162,5 +178,4 @@ app.get('*', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-  console.log(`Endpoint available at http://localhost:${PORT}/extract-bill-data`);
 });
