@@ -1,3 +1,4 @@
+
 export interface BillItem {
   item_name: string;
   item_amount: number;
@@ -7,7 +8,8 @@ export interface BillItem {
 
 export interface PageLineItems {
   page_no: string;
-  page_type: "Bill Detail" | "Final Bill" | "Pharmacy" | "Unknown";
+  // Strictly enforcing the 3 types required
+  page_type: "Bill Detail" | "Final Bill" | "Pharmacy";
   bill_items: BillItem[];
 }
 
