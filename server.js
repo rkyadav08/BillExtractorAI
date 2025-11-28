@@ -1,14 +1,8 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import { GoogleGenAI, SchemaType } from "@google/genai"; // Note: SchemaType usage depends on specific version, mostly Type is used now.
-import { Type } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 import { Buffer } from 'node:buffer';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -16,7 +10,6 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 // Maximum limit for large PDFs
 app.use(express.json({ limit: '50mb' }));
-app.use(express.static(path.join(__dirname, 'dist')));
 
 const apiKey = process.env.API_KEY;
 const ai = new GoogleGenAI({ apiKey: apiKey });
@@ -152,10 +145,6 @@ app.post('/extract-bill-data', async (req, res) => {
       error: error.message
     });
   }
-});
-
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
 app.listen(PORT, () => console.log(`Server running on ${PORT}`));
