@@ -1,4 +1,3 @@
-
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
@@ -15,8 +14,8 @@ const port = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// Serve the Frontend Build (UI)
-// This ensures that accessing the root URL loads your React App
+// 1. Serve the Frontend Build (UI)
+// This makes the root URL (/) load your React App
 app.use(express.static(path.join(__dirname, 'dist')));
 
 // --- API Configuration ---
@@ -74,7 +73,6 @@ const extractionSchema = {
 };
 
 // Helper to fetch URL and convert to Base64 (Node.js version)
-// Note: Node.js fetch does NOT have CORS restrictions, so we can fetch directly!
 const urlToGenerativePart = async (url) => {
     try {
         console.log(`Fetching URL: ${url}`);
@@ -85,10 +83,9 @@ const urlToGenerativePart = async (url) => {
         const buffer = Buffer.from(arrayBuffer);
         const base64Data = buffer.toString('base64');
         
-        // Simple mime type detection based on extension or header
         let mimeType = response.headers.get('content-type');
         
-        // Fallback or fix mime types if generic
+        // Fallback for generic types
         if (!mimeType || mimeType === 'application/octet-stream' || mimeType === 'binary/octet-stream') {
             const lowerUrl = url.toLowerCase();
             if (lowerUrl.endsWith('.png')) mimeType = 'image/png';
@@ -97,8 +94,6 @@ const urlToGenerativePart = async (url) => {
             else mimeType = 'application/pdf';
         }
         
-        console.log(`Detected MIME type: ${mimeType}`);
-
         return {
             inlineData: {
                 data: base64Data,
@@ -111,10 +106,9 @@ const urlToGenerativePart = async (url) => {
     }
 };
 
-// --- THE API ENDPOINT ---
+// 2. THE API ENDPOINT (POST)
 app.post('/extract-bill-data', async (req, res) => {
     try {
-        console.log("Received /extract-bill-data request");
         const { document } = req.body;
         
         if (!document) {
@@ -122,13 +116,10 @@ app.post('/extract-bill-data', async (req, res) => {
         }
 
         if (!process.env.API_KEY) {
-            console.error("Server misconfiguration: API_KEY missing");
             return res.status(500).json({ error: "Server misconfiguration: API_KEY missing" });
         }
 
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        
-        // Fetch and process the file
         const filePart = await urlToGenerativePart(document);
 
         const prompt = `
@@ -142,9 +133,6 @@ app.post('/extract-bill-data', async (req, res) => {
            - If 'item quantity' is not present in the doc, you MUST set 'item_quantity' = 0.0.
         4. **Amounts**: 'item_amount' must be exactly as extracted (Net Amount). No rounding off allowed unless it's rounded in the doc.
         5. **Page Type**: Categorize each page strictly as one of: "Bill Detail", "Final Bill", "Pharmacy".
-           - "Bill Detail": Detailed line-item breakdown including medicines, tests, procedures and services.
-           - "Final Bill": A consolidated bill with category-level totals.
-           - "Pharmacy": Receipt from pharmacy.
         6. **Data Accuracy**: 
            - 'data.total_item_count' must equal the sum of counts of items across all pages.
         7. **Token Usage**: Populate 0 for tokens in the response JSON; we will populate the actual usage from API metadata.
@@ -153,7 +141,6 @@ app.post('/extract-bill-data', async (req, res) => {
         Extract now.
         `;
 
-        console.log("Sending to Gemini...");
         const modelResponse = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: {
@@ -168,11 +155,8 @@ app.post('/extract-bill-data', async (req, res) => {
         });
 
         const resultText = modelResponse.text;
-        if (!resultText) throw new Error("Empty response from AI model");
-
         const parsedData = JSON.parse(resultText);
 
-        // Add metadata
         if (modelResponse.usageMetadata) {
             parsedData.token_usage = {
                 input_tokens: modelResponse.usageMetadata.promptTokenCount || 0,
@@ -181,7 +165,6 @@ app.post('/extract-bill-data', async (req, res) => {
             };
         }
 
-        console.log("Extraction successful");
         res.json(parsedData);
 
     } catch (error) {
@@ -193,8 +176,7 @@ app.post('/extract-bill-data', async (req, res) => {
     }
 });
 
-// Handle React Routing (return index.html for all non-API routes)
-// This fixes 404s when refreshing pages in the React app
+// 3. Handle React Routing (return index.html for all non-API routes)
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
