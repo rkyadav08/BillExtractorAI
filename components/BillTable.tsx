@@ -1,10 +1,20 @@
+
 import React from 'react';
 import { ExtractionData, BillItem, PageLineItems } from '../types';
-import { FileText, Coins, Hash, List } from 'lucide-react';
+import { FileText } from 'lucide-react';
 
 interface BillTableProps {
   data: ExtractionData;
 }
+
+const getPageTypeColor = (type: string) => {
+  switch (type) {
+    case 'Final Bill': return 'bg-purple-100 text-purple-700 border-purple-200';
+    case 'Pharmacy': return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+    case 'Bill Detail': return 'bg-blue-100 text-blue-700 border-blue-200';
+    default: return 'bg-gray-100 text-gray-700';
+  }
+};
 
 const BillTable: React.FC<BillTableProps> = ({ data }) => {
   return (
@@ -23,14 +33,14 @@ const BillTable: React.FC<BillTableProps> = ({ data }) => {
       {data.pagewise_line_items.map((page: PageLineItems, index: number) => (
         <div key={index} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-            <div className="flex items-center space-x-2">
-              <FileText className="w-5 h-5 text-indigo-600" />
+            <div className="flex items-center space-x-3">
+              <FileText className="w-5 h-5 text-gray-500" />
               <h3 className="font-semibold text-gray-800">Page {page.page_no}</h3>
-              <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-xs font-medium">
+              <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getPageTypeColor(page.page_type)}`}>
                 {page.page_type}
               </span>
             </div>
-            <span className="text-xs text-gray-500">{page.bill_items.length} items</span>
+            <span className="text-xs text-gray-500 font-medium">{page.bill_items.length} items</span>
           </div>
 
           <div className="overflow-x-auto">
@@ -61,10 +71,10 @@ const BillTable: React.FC<BillTableProps> = ({ data }) => {
                   </tr>
                 ))}
               </tbody>
-              <tfoot className="bg-gray-50">
+              <tfoot className="bg-gray-50/50">
                  <tr>
-                    <td colSpan={3} className="px-6 py-3 text-sm font-semibold text-gray-700 text-right">Page Total</td>
-                    <td className="px-6 py-3 text-sm font-bold text-gray-900 text-right font-mono">
+                    <td colSpan={3} className="px-6 py-2 text-xs font-semibold text-gray-500 text-right uppercase tracking-wider">Page Total</td>
+                    <td className="px-6 py-2 text-sm font-bold text-gray-900 text-right font-mono">
                       {page.bill_items.reduce((sum, i) => sum + i.item_amount, 0).toFixed(2)}
                     </td>
                  </tr>
