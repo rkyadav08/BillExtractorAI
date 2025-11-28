@@ -14,8 +14,13 @@ const port = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
+// Debug Middleware: Log all incoming requests
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  next();
+});
+
 // 1. Serve the Frontend Build (UI)
-// This makes the root URL (/) load your React App
 app.use(express.static(path.join(__dirname, 'dist')));
 
 // --- API Configuration ---
@@ -106,9 +111,15 @@ const urlToGenerativePart = async (url) => {
     }
 };
 
+// API Health Check
+app.get('/health', (req, res) => {
+    res.json({ status: "ok", type: "Web Service" });
+});
+
 // 2. THE API ENDPOINT (POST)
 app.post('/extract-bill-data', async (req, res) => {
     try {
+        console.log("Processing /extract-bill-data");
         const { document } = req.body;
         
         if (!document) {
@@ -141,6 +152,7 @@ app.post('/extract-bill-data', async (req, res) => {
         Extract now.
         `;
 
+        console.log("Sending request to Gemini...");
         const modelResponse = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: {
@@ -165,6 +177,7 @@ app.post('/extract-bill-data', async (req, res) => {
             };
         }
 
+        console.log("Extraction complete.");
         res.json(parsedData);
 
     } catch (error) {
@@ -176,7 +189,8 @@ app.post('/extract-bill-data', async (req, res) => {
     }
 });
 
-// 3. Handle React Routing (return index.html for all non-API routes)
+// 3. Handle React Routing (catch-all)
+// This must be the LAST route
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
