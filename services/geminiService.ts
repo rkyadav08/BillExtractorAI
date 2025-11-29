@@ -238,7 +238,7 @@ export const extractBillData = async (input: File | string): Promise<BillExtract
         temperature: 0.0, // Strict determinism
         thinkingConfig: {
           thinkingBudget: 2048 // Enable thinking for better reasoning
-        }
+        } as any
       }
     });
 
