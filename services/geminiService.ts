@@ -199,38 +199,27 @@ export const extractBillData = async (input: File | string): Promise<BillExtract
   }
 
   const prompt = `
-  You are a high-precision financial auditor AI. Your ONLY job is to extract line item data from medical bills with 100% accuracy.
+  Role: Senior Financial Auditor.
+  Task: Extract line items from the medical bill document into strict JSON format.
+  Goal: Achieve 100% accuracy in extracted amounts so the sum matches the document total.
 
-  ### CORE OBJECTIVE
-  Reconstruct the bill's line items such that the Sum(extracted item_amounts) equals the Actual Bill Total. 
-  
-  ### CRITICAL EXCLUSION RULES (To prevent Double Counting)
-  - **NEVER** extract rows that are subtotals or totals. (e.g., "Total", "Grand Total", "Sub Total", "Net Amount", "Amount Payable").
-  - **NEVER** extract "Balance Due", "Paid Amount", "Brought Forward", or "Carried Forward".
-  - **NEVER** extract category headers as items if they don't have a specific amount attached (or if they are just grouping headers).
-  - **ONLY** extract the atomic line items (medicines, specific tests, room charges for specific dates).
+  ### STRICT EXCLUSION RULES (CRITICAL):
+  1. **NO SUBTOTALS/TOTALS**: Ignore any row containing "Total", "Grand Total", "Sub Total", "Net Amount", "Amount Payable", "Balance", "Due", "Brought Forward", "Carried Forward".
+  2. **NO GROUP HEADERS**: Ignore category headers (e.g., "Pharmacy Charges", "Room Rent") unless they have a specific amount on the same line that isn't a sum of items below.
+  3. **NO DOUBLE COUNTING**: If a section has individual items and a subtotal, EXTRACT THE INDIVIDUAL ITEMS, IGNORE THE SUBTOTAL.
 
-  ### PAGE TYPE CLASSIFICATION RULES
-  - **"Final Bill"**: Look for high-level summaries (e.g., "Room Rent: 5000", "Pharmacy: 2000"). If the page lists these consolidated charges, it is a Final Bill. Extract these consolidated rows as items.
-  - **"Bill Detail"**: Look for granular lists (e.g., "10/10/2023 Room Rent", "CBC Test", "X-Ray"). 
-  - **"Pharmacy"**: Look for drug names, batch numbers, and expiry dates.
+  ### PAGE CLASSIFICATION:
+  - **Pharmacy**: Page lists medicine names, batches, exp dates.
+  - **Final Bill**: Page lists high-level categories (e.g., "Pharmacy.... 5000", "Consultation... 2000") and acts as a cover summary.
+  - **Bill Detail**: Page lists specific dates, specific test names (CBC, X-Ray), or daily room charges.
 
-  ### FIELD EXTRACTION RULES
-  1. **item_name**: The full description of the service/product.
-  2. **item_rate**: The unit price. **IMPORTANT**: If the rate column is missing or empty, YOU MUST RETURN 0.0. Do not infer it.
-  3. **item_quantity**: The count. **IMPORTANT**: If the quantity column is missing or empty, YOU MUST RETURN 0.0.
-  4. **item_amount**: The NET amount for that line (Rate * Qty - Discount). 
+  ### DATA EXTRACTION RULES:
+  - **item_name**: Extract full description.
+  - **item_rate**: Extract Unit Price. **IF MISSING/EMPTY, RETURN 0.0**. DO NOT CALCULATE.
+  - **item_quantity**: Extract Count. **IF MISSING/EMPTY, RETURN 0.0**. DO NOT ASSUME 1.
+  - **item_amount**: Extract Net Amount.
 
-  ### EXECUTION STEPS
-  1. Analyze the layout of each page.
-  2. Determine the "Page Type" based on content.
-  3. Iterate through every table row.
-  4. CHECK: Is this row a Total/Subtotal? If YES -> SKIP IT.
-  5. CHECK: Is this row a header? If YES -> SKIP IT.
-  6. EXTRACT: Name, Rate (default 0.0), Qty (default 0.0), Amount.
-  7. Verify: Does the sum of your extracted items roughly match the page total? If not, check if you missed items or included a subtotal.
-
-  Generate the JSON response now.
+  Analyze the table structure carefully. Ensure no row is skipped unless it is an exclusion.
   `;
 
   try {
@@ -246,7 +235,7 @@ export const extractBillData = async (input: File | string): Promise<BillExtract
       config: {
         responseMimeType: "application/json",
         responseSchema: extractionSchema,
-        temperature: 0.0, // Zero temperature for maximum determinism
+        temperature: 0.0, // Strict determinism
         thinkingConfig: {
           thinkingBudget: 2048 // Enable thinking for better reasoning
         }
