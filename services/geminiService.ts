@@ -204,9 +204,15 @@ export const extractBillData = async (input: File | string): Promise<BillExtract
   Goal: Achieve 100% accuracy in extracted amounts so the sum matches the document total.
 
   ### STRICT EXCLUSION RULES (CRITICAL):
-  1. **NO SUBTOTALS/TOTALS**: Ignore any row containing "Total", "Grand Total", "Sub Total", "Net Amount", "Amount Payable", "Balance", "Due", "Brought Forward", "Carried Forward".
+  1. **NO SUBTOTALS/TOTALS**: Ignore any row containing "Total", "Grand Total", "Sub Total", "Net Amount", "Amount Payable", "Balance", "Due", "Brought Forward", "Carried Forward", "Outstanding".
   2. **NO GROUP HEADERS**: Ignore category headers (e.g., "Pharmacy Charges", "Room Rent") unless they have a specific amount on the same line that isn't a sum of items below.
   3. **NO DOUBLE COUNTING**: If a section has individual items and a subtotal, EXTRACT THE INDIVIDUAL ITEMS, IGNORE THE SUBTOTAL.
+
+  ### COLUMN SELECTION LOGIC (CRITICAL):
+  - **Ambiguous Columns**: Some bills have multiple amount columns (e.g., "Amount", "Company Amount", "Gross", "Net").
+  - **Selection Rule**: Look for the column that represents the **Actual Charge** for the item.
+  - **Scenario A**: If "Amount" is 0.00 but "Company Amount" is 250.00, **USE 250.00** (This is an insurance bill).
+  - **Scenario B**: If "Gross" is 100.00 and "Net" is 90.00 (after discount), **USE 90.00** (Net Amount).
 
   ### PAGE CLASSIFICATION:
   - **Pharmacy**: Page lists medicine names, batches, exp dates.
@@ -214,10 +220,10 @@ export const extractBillData = async (input: File | string): Promise<BillExtract
   - **Bill Detail**: Page lists specific dates, specific test names (CBC, X-Ray), or daily room charges.
 
   ### DATA EXTRACTION RULES:
-  - **item_name**: Extract full description.
+  - **item_name**: Extract full description. Do not include the Date column in the name unless it's part of the description text itself.
   - **item_rate**: Extract Unit Price. **IF MISSING/EMPTY, RETURN 0.0**. DO NOT CALCULATE.
   - **item_quantity**: Extract Count. **IF MISSING/EMPTY, RETURN 0.0**. DO NOT ASSUME 1.
-  - **item_amount**: Extract Net Amount.
+  - **item_amount**: Extract Net Amount (See Column Selection Logic).
 
   Analyze the table structure carefully. Ensure no row is skipped unless it is an exclusion.
   `;
