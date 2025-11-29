@@ -135,35 +135,39 @@ app.post('/extract-bill-data', async (req, res) => {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const filePart = await urlToGenerativePart(document);
 
-        // Optimized CoT prompt for high accuracy and speed
+        // Optimized CoT prompt for high accuracy
         const prompt = `
         Role: Senior Financial Auditor.
-        Task: Extract line items from the medical bill document into strict JSON format.
-        Goal: Achieve 100% accuracy in extracted amounts so the sum matches the document total.
+        Task: Extract line items from the medical bill document into strict JSON format as per the schema.
+        
+        ### DATA ACCURACY RULES (HIGHEST PRIORITY):
+        1. **Rate & Quantity**: 
+           - IF a specific "Rate" or "Quantity" column exists and has a value, use it.
+           - IF the column is empty, missing, or contains "-", **YOU MUST RETURN 0.0**. 
+           - **NEVER** calculate Rate = Amount / Quantity. 
+           - **NEVER** assume Quantity = 1 if not explicitly written.
+        
+        2. **Item Name**: 
+           - Extract the full description. 
+           - **CLEANING**: Remove dates (e.g., "12/11/2025") from the start of the description unless the description is ONLY a date.
+        
+        3. **Item Amount (Crucial)**:
+           - This must be the **Net Payable Amount** for that specific line item.
+           - **Handling Multiple Amount Columns**:
+             - If "Amount" = 0 but "Company Amount" > 0, use "Company Amount" (Insurance Bill).
+             - If "Gross" and "Net" exist, use "Net".
+             - If "Billed" and "Allowed" exist, use "Allowed".
+        
+        ### EXCLUSION RULES (PREVENT DOUBLE COUNTING):
+        - **IGNORE** any row that is a summation: "Total", "Sub Total", "Net Amount", "Grand Total", "Total Bill", "Balance", "Due", "Carry Forward".
+        - **IGNORE** category headers that don't have a distinct price on the same line (e.g. "Pharmacy Charges" header followed by list of drugs -> Ignore the header).
+        
+        ### PAGE TYPES:
+        - "Pharmacy": Lists of drugs, batches, expiry.
+        - "Final Bill": Summary of charges by category (e.g. "Room Rent", "Consultation", "Lab").
+        - "Bill Detail": Chronological or detailed list of services/tests.
 
-        ### STRICT EXCLUSION RULES (CRITICAL):
-        1. **NO SUBTOTALS/TOTALS**: Ignore any row containing "Total", "Grand Total", "Sub Total", "Net Amount", "Amount Payable", "Balance", "Due", "Brought Forward", "Carried Forward", "Outstanding".
-        2. **NO GROUP HEADERS**: Ignore category headers (e.g., "Pharmacy Charges", "Room Rent") unless they have a specific amount on the same line that isn't a sum of items below.
-        3. **NO DOUBLE COUNTING**: If a section has individual items and a subtotal, EXTRACT THE INDIVIDUAL ITEMS, IGNORE THE SUBTOTAL.
-
-        ### COLUMN SELECTION LOGIC (CRITICAL):
-        - **Ambiguous Columns**: Some bills have multiple amount columns (e.g., "Amount", "Company Amount", "Gross", "Net").
-        - **Selection Rule**: Look for the column that represents the **Actual Charge** for the item.
-        - **Scenario A**: If "Amount" is 0.00 but "Company Amount" is 250.00, **USE 250.00** (This is an insurance bill).
-        - **Scenario B**: If "Gross" is 100.00 and "Net" is 90.00 (after discount), **USE 90.00** (Net Amount).
-
-        ### PAGE CLASSIFICATION:
-        - **Pharmacy**: Page lists medicine names, batches, exp dates.
-        - **Final Bill**: Page lists high-level categories (e.g., "Pharmacy.... 5000", "Consultation... 2000") and acts as a cover summary.
-        - **Bill Detail**: Page lists specific dates, specific test names (CBC, X-Ray), or daily room charges.
-
-        ### DATA EXTRACTION RULES:
-        - **item_name**: Extract full description. Do not include the Date column in the name unless it's part of the description text itself.
-        - **item_rate**: Extract Unit Price. **IF MISSING/EMPTY, RETURN 0.0**. DO NOT CALCULATE.
-        - **item_quantity**: Extract Count. **IF MISSING/EMPTY, RETURN 0.0**. DO NOT ASSUME 1.
-        - **item_amount**: Extract Net Amount (See Column Selection Logic).
-
-        Analyze the table structure carefully. Ensure no row is skipped unless it is an exclusion.
+        Analyze the table structure deeply before extracting.
         `;
 
         console.log("Sending request to Gemini...");
@@ -178,7 +182,7 @@ app.post('/extract-bill-data', async (req, res) => {
                 responseSchema: extractionSchema,
                 temperature: 0.0, // Strict determinism
                 thinkingConfig: {
-                    thinkingBudget: 2048 // Budget for reasoning to ensure table structure is understood
+                    thinkingBudget: 4096 // Higher budget for complex table auditing
                 } 
             }
         });
@@ -186,12 +190,20 @@ app.post('/extract-bill-data', async (req, res) => {
         const resultText = modelResponse.text;
         const parsedData = JSON.parse(resultText);
 
+        // Explicitly overwrite token_usage with actual metadata from the API
         if (modelResponse.usageMetadata) {
             parsedData.token_usage = {
                 input_tokens: modelResponse.usageMetadata.promptTokenCount || 0,
                 output_tokens: modelResponse.usageMetadata.candidatesTokenCount || 0,
                 total_tokens: modelResponse.usageMetadata.totalTokenCount || 0
             };
+        } else {
+             // Fallback if metadata is missing (rare)
+             parsedData.token_usage = {
+                total_tokens: 0,
+                input_tokens: 0,
+                output_tokens: 0
+             };
         }
 
         console.log("Extraction complete.");
