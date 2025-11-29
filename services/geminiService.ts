@@ -262,9 +262,10 @@ export const extractBillData = async (input: File | string): Promise<BillExtract
     // Enhance response with actual usage metadata from the API response object
     if (response.usageMetadata) {
         parsedData.token_usage = {
+            total_tokens: response.usageMetadata.totalTokenCount || 0,
             input_tokens: response.usageMetadata.promptTokenCount || 0,
-            output_tokens: response.usageMetadata.candidatesTokenCount || 0,
-            total_tokens: response.usageMetadata.totalTokenCount || 0
+            output_tokens: response.usageMetadata.candidatesTokenCount || 0
+            
         };
     } else {
        // Fallback if metadata is missing (rare)
