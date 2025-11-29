@@ -135,23 +135,40 @@ app.post('/extract-bill-data', async (req, res) => {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const filePart = await urlToGenerativePart(document);
 
+        // Highly specific CoT prompt for accuracy
         const prompt = `
-        You are an expert autonomous data extractor for medical and pharmacy bills.
-        Analyze the provided document (PDF or Image) and extract line item details strictly following these rules:
-    
-        1. **Structure**: Return a JSON object matching the provided schema exactly.
-        2. **Line Items**: Extract every single line item. Do not miss any. Do not double count.
-        3. **Missing Values** (Strict Rule): 
-           - If 'item rate' is not present in the doc, you MUST set 'item_rate' = 0.0.
-           - If 'item quantity' is not present in the doc, you MUST set 'item_quantity' = 0.0.
-        4. **Amounts**: 'item_amount' must be exactly as extracted (Net Amount). No rounding off allowed unless it's rounded in the doc.
-        5. **Page Type**: Categorize each page strictly as one of: "Bill Detail", "Final Bill", "Pharmacy".
-        6. **Data Accuracy**: 
-           - 'data.total_item_count' must equal the sum of counts of items across all pages.
-        7. **Token Usage**: Populate 0 for tokens in the response JSON; we will populate the actual usage from API metadata.
-        8. **Success Flag**: Set 'is_success' to true if data was extracted.
+        You are a high-precision financial auditor AI. Your ONLY job is to extract line item data from medical bills with 100% accuracy.
+
+        ### CORE OBJECTIVE
+        Reconstruct the bill's line items such that the Sum(extracted item_amounts) equals the Actual Bill Total. 
         
-        Extract now.
+        ### CRITICAL EXCLUSION RULES (To prevent Double Counting)
+        - **NEVER** extract rows that are subtotals or totals. (e.g., "Total", "Grand Total", "Sub Total", "Net Amount", "Amount Payable").
+        - **NEVER** extract "Balance Due", "Paid Amount", "Brought Forward", or "Carried Forward".
+        - **NEVER** extract category headers as items if they don't have a specific amount attached (or if they are just grouping headers).
+        - **ONLY** extract the atomic line items (medicines, specific tests, room charges for specific dates).
+
+        ### PAGE TYPE CLASSIFICATION RULES
+        - **"Final Bill"**: Look for high-level summaries (e.g., "Room Rent: 5000", "Pharmacy: 2000"). If the page lists these consolidated charges, it is a Final Bill. Extract these consolidated rows as items.
+        - **"Bill Detail"**: Look for granular lists (e.g., "10/10/2023 Room Rent", "CBC Test", "X-Ray"). 
+        - **"Pharmacy"**: Look for drug names, batch numbers, and expiry dates.
+
+        ### FIELD EXTRACTION RULES
+        1. **item_name**: The full description of the service/product.
+        2. **item_rate**: The unit price. **IMPORTANT**: If the rate column is missing or empty, YOU MUST RETURN 0.0. Do not infer it.
+        3. **item_quantity**: The count. **IMPORTANT**: If the quantity column is missing or empty, YOU MUST RETURN 0.0.
+        4. **item_amount**: The NET amount for that line (Rate * Qty - Discount). 
+
+        ### EXECUTION STEPS
+        1. Analyze the layout of each page.
+        2. Determine the "Page Type" based on content.
+        3. Iterate through every table row.
+        4. CHECK: Is this row a Total/Subtotal? If YES -> SKIP IT.
+        5. CHECK: Is this row a header? If YES -> SKIP IT.
+        6. EXTRACT: Name, Rate (default 0.0), Qty (default 0.0), Amount.
+        7. Verify: Does the sum of your extracted items roughly match the page total? If not, check if you missed items or included a subtotal.
+
+        Generate the JSON response now.
         `;
 
         console.log("Sending request to Gemini...");
@@ -164,7 +181,11 @@ app.post('/extract-bill-data', async (req, res) => {
             config: {
                 responseMimeType: "application/json",
                 responseSchema: extractionSchema,
-                temperature: 0.1,
+                temperature: 0.0, // Zero temperature for maximum determinism
+                // Enable thinking for better reasoning on table structures and exclusions
+                thinkingConfig: {
+                    thinkingBudget: 2048
+                } 
             }
         });
 
