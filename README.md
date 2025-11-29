@@ -3,7 +3,8 @@
 > **HackRx Datathon Solution**  
 > An intelligent, high-precision document extraction system designed to parse complex medical invoices into structured JSON data using Google Gemini 2.5 Flash.
 
-**🚀 Live Demo / API Base URL:** [https://rohitkumaryadav-manitbhopa.onrender.com](https://rohitkumaryadav-manitbhopa.onrender.com).
+**🚀 Live Demo / API Base URL:** [https://rohitkumaryadav-manitbhopa.onrender.com](https://rohitkumaryadav-manitbhopa.onrender.com)
+
 *Endpoint URL*: https://rohitkumaryadav-manitbhopa.onrender.com/extract-bill-data
 
 ## 📖 Overview
