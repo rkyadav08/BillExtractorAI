@@ -247,7 +247,7 @@ export const extractBillData = async (input: File | string): Promise<BillExtract
         responseSchema: extractionSchema,
         temperature: 0.0, // Strict determinism
         thinkingConfig: {
-          thinkingBudget: 1024 // Higher budget for complex table auditing
+          thinkingBudget: 512 // Higher budget for complex table auditing
         } as any
       }
     });
