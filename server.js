@@ -182,7 +182,7 @@ app.post('/extract-bill-data', async (req, res) => {
                 responseSchema: extractionSchema,
                 temperature: 0.0, // Strict determinism
                 thinkingConfig: {
-                    thinkingBudget: 1024 // Higher budget for complex table auditing
+                    thinkingBudget: 512 // Higher budget for complex table auditing
                 } 
             }
         });
